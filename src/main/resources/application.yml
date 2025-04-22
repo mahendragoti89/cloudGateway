@@ -1,0 +1,60 @@
+server:
+  port: 8989
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/Emp
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: create
+  application:
+    name: gatewayService
+  cloud:
+    gateway:
+      routes:
+        - id: orderService
+          uri: lb://orderService
+          predicates:
+            - Path=/order/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: order-Service
+                fallbackUri: forward:/orderFallback
+        - id: paymentService
+          uri: lb://paymentService
+          predicates:
+            - Path=/payment/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: payment-Service
+                fallbackUri: forward:/paymentFallback
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    register-With-Eureka: true
+    fetch-Registry: true
+    service-Url:
+      defaultZone: http://localhost:8761/eureka
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: hystrix.stream
+
+hystrix:
+  command:
+    fallbackcmd:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 5000
